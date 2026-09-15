@@ -21,23 +21,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Universal Touch & Click Listener Helper
+  // Reliable mobile/desktop tap helper. One click event prevents duplicate taps.
   function addTapListener(element, callback) {
     if (!element) return;
-    let handled = false;
-
-    const handleTap = (e) => {
+    element.addEventListener('click', (e) => {
       e.stopPropagation();
       initAudioContext();
-      if (handled) return;
-      handled = true;
-      setTimeout(() => { handled = false; }, 250);
       callback(e);
-    };
-
-    element.addEventListener('pointerdown', handleTap, { passive: false });
-    element.addEventListener('mousedown', handleTap);
-    element.addEventListener('click', handleTap);
+    });
   }
 
   // Synthesize Romantic Piano Melody using Web Audio API
@@ -200,9 +191,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  volumeSlider.addEventListener('input', (e) => {
-    masterVolume = parseFloat(e.target.value);
-  });
+  if (volumeSlider) {
+    volumeSlider.addEventListener('input', (e) => {
+      masterVolume = parseFloat(e.target.value);
+    });
+  }
 
   // --- CANVAS SAKURA PETALS ENGINE ---
   const blossomCanvas = document.getElementById('blossomCanvas');
@@ -412,17 +405,16 @@ document.addEventListener('DOMContentLoaded', () => {
       balloonField.appendChild(balloon);
     }
 
-    // Auto-pop button listener
-    const autoPopBtn = document.getElementById('autoPopBtn');
-    addTapListener(autoPopBtn, () => {
-      const activeBalloons = document.querySelectorAll('.balloon-item:not([data-popped="true"])');
-      activeBalloons.forEach((b, idx) => {
-        setTimeout(() => {
-          popBalloon(b, null);
-        }, idx * 100);
-      });
-    });
   }
+
+  // Register Auto Pop only once.
+  const autoPopBtn = document.getElementById('autoPopBtn');
+  addTapListener(autoPopBtn, () => {
+    const activeBalloons = document.querySelectorAll('.balloon-item:not([data-popped="true"])');
+    activeBalloons.forEach((b, idx) => {
+      setTimeout(() => popBalloon(b, null), idx * 100);
+    });
+  });
 
   function popBalloon(balloonEl, e) {
     if (!balloonEl || balloonEl.dataset.popped === 'true') return;
@@ -535,7 +527,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 2800);
   });
 
-  // --- PAGE 4: DECORATED 8-PHOTO GALLERY LOGIC ---
+  // --- PAGE 4: DECORATED 10-PHOTO GALLERY LOGIC ---
   const pngFrames = document.querySelectorAll('.png-decorated-frame');
   const revealedPhotoCountEl = document.getElementById('revealedPhotoCount');
   const goToLetterBtn = document.getElementById('goToLetterBtn');
@@ -645,97 +637,4 @@ document.addEventListener('DOMContentLoaded', () => {
   function playHeartTreeTransition(next) {
     heartTree.innerHTML = '';
     heartTreeOverlay.classList.add('show');
-    for (let i = 0; i < 52; i++) {
-      const heart = document.createElement('span');
-      heart.className = 'tree-heart';
-      const angle = (i / 52) * Math.PI * 2;
-      const radius = 35 + (i % 6) * 15;
-      heart.style.setProperty('--x', `${Math.cos(angle) * radius}px`);
-      heart.style.setProperty('--y', `${Math.sin(angle) * radius - 38}px`);
-      heart.style.setProperty('--delay', `${i * 24}ms`);
-      heart.textContent = i % 3 === 0 ? '💖' : '❤️';
-      heartTree.appendChild(heart);
-    }
-    setTimeout(() => heartTreeOverlay.classList.add('falling'), 1550);
-    setTimeout(() => {
-      heartTreeOverlay.classList.remove('show', 'falling');
-      next();
-    }, 3500);
-  }
-
-  // --- FLOWER RAIN ON THE LETTER AND SCRATCH SURPRISE ---
-  const flowerRain = document.getElementById('flowerRain');
-  let flowerRainTimer;
-  function startFlowerRain(duration = 5000) {
-    clearTimeout(flowerRainTimer);
-    flowerRain.innerHTML = '';
-    flowerRain.classList.add('active');
-    for (let i = 0; i < 34; i++) {
-      const flower = document.createElement('span');
-      flower.className = 'rain-flower';
-      flower.textContent = ['🌸', '🌺', '🌷', '🌼'][i % 4];
-      flower.style.left = `${Math.random() * 100}%`;
-      flower.style.animationDelay = `${Math.random() * 1.8}s`;
-      flower.style.animationDuration = `${3 + Math.random() * 2}s`;
-      flowerRain.appendChild(flower);
-    }
-    flowerRainTimer = setTimeout(() => flowerRain.classList.remove('active'), duration);
-  }
-
-  // --- PAGE 6: SCRATCH CARD ---
-  const scratchCanvas = document.getElementById('scratchCanvas');
-  const scratchCard = document.getElementById('scratchCard');
-  const scratchReplayBtn = document.getElementById('scratchReplayBtn');
-  let scratchReady = false;
-  let isScratching = false;
-  let scratchCompleted = false;
-  function initScratchCard() {
-    if (!scratchCanvas || !scratchCard) return;
-    const rect = scratchCard.getBoundingClientRect();
-    const ratio = window.devicePixelRatio || 1;
-    scratchCanvas.width = rect.width * ratio;
-    scratchCanvas.height = rect.height * ratio;
-    scratchCanvas.style.width = `${rect.width}px`;
-    scratchCanvas.style.height = `${rect.height}px`;
-    const ctx = scratchCanvas.getContext('2d');
-    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-    const gold = ctx.createLinearGradient(0, 0, rect.width, rect.height);
-    gold.addColorStop(0, '#f8d774'); gold.addColorStop(.48, '#bd7b20'); gold.addColorStop(1, '#ffe9a6');
-    ctx.fillStyle = gold; ctx.fillRect(0, 0, rect.width, rect.height);
-    ctx.fillStyle = 'rgba(255,255,255,.72)'; ctx.font = '700 20px Fredoka, sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText('Scratch here ✨', rect.width / 2, rect.height / 2);
-    scratchCanvas.style.opacity = '1';
-    scratchReplayBtn.classList.add('hidden');
-    scratchCompleted = false; scratchReady = true;
-    startFlowerRain(5000);
-  }
-  function scratchAt(event) {
-    if (!scratchReady || scratchCompleted) return;
-    const rect = scratchCanvas.getBoundingClientRect();
-    const point = event.touches ? event.touches[0] : event;
-    const ctx = scratchCanvas.getContext('2d');
-    ctx.globalCompositeOperation = 'destination-out';
-    ctx.beginPath(); ctx.arc(point.clientX - rect.left, point.clientY - rect.top, 26, 0, Math.PI * 2); ctx.fill();
-  }
-  ['pointerdown', 'pointermove'].forEach(type => scratchCanvas.addEventListener(type, event => {
-    if (type === 'pointerdown') { isScratching = true; scratchCanvas.setPointerCapture?.(event.pointerId); }
-    if (isScratching) scratchAt(event);
-  }));
-  ['pointerup', 'pointerleave', 'pointercancel'].forEach(type => scratchCanvas.addEventListener(type, () => { isScratching = false; checkScratchProgress(); }));
-  function checkScratchProgress() {
-    if (scratchCompleted) return;
-    const ctx = scratchCanvas.getContext('2d');
-    const data = ctx.getImageData(0, 0, scratchCanvas.width, scratchCanvas.height).data;
-    let clear = 0;
-    for (let i = 3; i < data.length; i += 64) if (data[i] < 35) clear++;
-    if (clear / Math.ceil(data.length / 64) > .35) {
-      scratchCompleted = true; scratchCanvas.style.opacity = '0';
-      document.getElementById('scratchRevealMessage').classList.add('visible');
-      scratchReplayBtn.classList.remove('hidden');
-      playFanfareSound(); startFlowerRain(6500);
-    }
-  }
-  addTapListener(document.getElementById('goToScratchBtn'), () => switchPage(6));
-  addTapListener(scratchReplayBtn, initScratchCard);
-
-});
+    for (let i = 0; i < 52; 
